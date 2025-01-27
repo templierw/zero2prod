@@ -1,9 +1,9 @@
+use std::net::TcpListener;
 
-fn print_name(name: &str) {
-    println!("hello {}", name);
-}
+use zero2prod::run;
 
-
-fn main() {
-    print_name("william");
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
+    let lst = TcpListener::bind("127.0.0.1:8000").expect("failed to bind");
+    run(lst)?.await
 }
