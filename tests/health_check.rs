@@ -1,11 +1,13 @@
 use std::net::TcpListener;
 
+use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
-
 use uuid::Uuid;
+
 use zero2prod::{
     configuration::{get_configuration, DataBaseSettings},
     startup::run,
+    telemetry::{get_subscriber, init_subscriber},
 };
 
 #[tokio::test]
@@ -86,12 +88,29 @@ async fn subscribe_invalid_form_400() {
     }
 }
 
+// UTILS
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let default_level_filter = "info".to_string();
+    let subscriber_name = "test".to_string();
+
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber(subscriber_name, default_level_filter, std::io::stdout);
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber(subscriber_name, default_level_filter, std::io::sink);
+        init_subscriber(subscriber);
+    }
+});
+
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
 }
 
 async fn spawn_app() -> TestApp {
+    Lazy::force(&TRACING);
+
     let lst = TcpListener::bind("127.0.0.1:0").expect("failed to bind");
     let port = lst.local_addr().unwrap().port();
     let addr = format!("http://127.0.0.1:{}", port);
