@@ -5,7 +5,13 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct Settings {
     pub database: DataBaseSettings,
-    pub application_port: u16,
+    pub application: ApplicationSettings,
+}
+
+#[derive(Deserialize)]
+pub struct ApplicationSettings {
+    pub port: u16,
+    pub host: String
 }
 
 #[derive(Deserialize)]
@@ -41,10 +47,46 @@ impl DataBaseSettings {
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
+    let env : Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or("local".into())
+        .try_into()
+        .expect("failed to parse APP_ENVIRONMENT");
+
+    let config_path = std::env::current_dir()
+        .expect("failed to determine cwd")
+        .join("configuration");
+
     config::Config::builder()
-        .add_source(config::File::with_name("configuration"))
+        .add_source(config::File::from(config_path.join("base")).required(true))
+        .add_source(config::File::from(config_path.join(env.as_str())).required(true))
         .build()?
         .try_deserialize()
+}
+
+pub enum Environment {
+    Local,
+    Production
+}
+
+impl Environment {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Environment::Local => "local",
+            Environment::Production => "production"
+        }
+    }
+}
+
+impl TryFrom<String> for Environment {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.to_lowercase().as_str() {
+            "local" => Ok(Self::Local),
+            "production" => Ok(Self::Production),
+            other => Err(format!("{} is not a supported environment; use `local` or `production`", other))
+        }
+    }
 }
 
 #[cfg(test)]

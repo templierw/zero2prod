@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 
 use zero2prod::configuration::get_configuration;
 use zero2prod::startup::run;
@@ -13,9 +13,11 @@ async fn main() -> std::io::Result<()> {
 
     let config = get_configuration().expect("failed to read configuration file");
 
-    let connection_pool = PgPool::connect_lazy(&config.database.connection_string())
+    let connection_pool = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(2))
+        .connect_lazy(&config.database.connection_string())
         .expect("failed to connect to postgres");
-    let address = format!("127.0.0.1:{}", config.application_port);
+    let address = format!("{}:{}", config.application.host, config.application.port);
 
     let lst = TcpListener::bind(address)?;
     run(lst, connection_pool)?.await
