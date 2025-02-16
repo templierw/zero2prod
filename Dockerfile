@@ -10,7 +10,7 @@ RUN cargo build --release
 
 ############################################
 
-FROM debian:bullseye-slim AS runtime
+FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 

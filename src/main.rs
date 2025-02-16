@@ -15,8 +15,8 @@ async fn main() -> std::io::Result<()> {
 
     let connection_pool = PgPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(2))
-        .connect_lazy(&config.database.connection_string())
-        .expect("failed to connect to postgres");
+        .connect_lazy_with(config.database.with_db());
+
     let address = format!("{}:{}", config.application.host, config.application.port);
 
     let lst = TcpListener::bind(address)?;
